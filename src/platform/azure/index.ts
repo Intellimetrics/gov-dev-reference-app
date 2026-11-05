@@ -44,7 +44,8 @@ export const azurePlatform: Platform = {
   telemetry: {
     // Azure Monitor takes the Microsoft OpenTelemetry Distro in process; the connection
     // string's endpoint suffix routes it to the Government ingestion host.
-    start: async () => {
+    start: async (serviceName) => {
+      process.env.OTEL_SERVICE_NAME ??= serviceName; // the distro reads the standard variable
       const { useMicrosoftOpenTelemetry } = await import('@microsoft/opentelemetry');
       useMicrosoftOpenTelemetry({
         azureMonitor: { azureMonitorExporterOptions: { connectionString: need('APPLICATIONINSIGHTS_CONNECTION_STRING'), credential } },
