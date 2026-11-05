@@ -1,0 +1,19 @@
+# deploy/aws/otel-collector.yaml: the collector sidecar in the ECS task (lesson 35).
+# The app is unchanged: it sends OTLP to localhost:4318. Traces go to X-Ray, because the
+# CloudWatch OTLP trace endpoint needs Transaction Search, which GovCloud does not offer.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch: {}
+exporters:
+  awsxray:
+    region: ${env:AWS_REGION}
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [awsxray]

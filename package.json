@@ -8,11 +8,15 @@
     "test:env": "M14_ENV=1 vitest run tests/env",
     "local:up": "bash scripts/local-up.sh",
     "local:down": "bash scripts/local-down.sh",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:aws-env": "M14_AWS_ENV=1 vitest run tests/env/aws-secrets.env.test.ts",
+    "validate:collectors": "for c in aws google; do docker run --rm -e AWS_REGION=us-gov-west-1 -e GOOGLE_CLOUD_PROJECT=demo -v \"$PWD/deploy/$c/otel-collector.yaml:/c.yaml:ro\" otel/opentelemetry-collector-contrib:0.140.0 validate --config=/c.yaml || exit 1; done"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1162.0",
     "@azure/identity": "^4.14.1",
     "@azure/keyvault-secrets": "^4.12.0",
+    "@google-cloud/secret-manager": "^7.2.0",
     "@microsoft/opentelemetry": "^1.5.0",
     "@opentelemetry/api": "^1.10.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.301.0",
