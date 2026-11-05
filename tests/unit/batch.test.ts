@@ -313,3 +313,13 @@ describe('idempotent re-delivery', () => {
     expect(readFileSync(join(s.out, 'intake-export-2026-11-04.csv'), 'utf8')).toBe(renderExport(rows()).toString('utf8'));
   });
 });
+
+describe('parseCsv edges', () => {
+  it('ignores a leading byte-order mark', () => {
+    expect(parseCsv('\ufeff"1",a\n').records.map((r) => r.fields)).toEqual([['1', 'a']]);
+  });
+  it('refuses a bare carriage return outside quotes, and keeps one inside quotes', () => {
+    expect(parseCsv('a\rb,c\n').malformed?.detail).toMatch(/bare carriage return/);
+    expect(parseCsv('"a\rb",c\n').records[0].fields).toEqual(['a\rb', 'c']);
+  });
+});

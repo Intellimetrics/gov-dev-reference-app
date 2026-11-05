@@ -47,7 +47,7 @@ export function parseCsv(text: string): { records: CsvRecord[]; malformed?: { li
     if (!(fields.length === 1 && fields[0] === '' && !sawQuote)) records.push({ line: start, fields });
     fields = []; cur = ''; sawQuote = false;
   };
-  for (let i = 0; i < text.length; i++) {
+  for (let i = text.charCodeAt(0) === 0xfeff ? 1 : 0; i < text.length; i++) {   // a leading UTF-8 byte-order mark is not data
     const c = text[i];
     if (state === 'quoted') {
       if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
@@ -56,6 +56,7 @@ export function parseCsv(text: string): { records: CsvRecord[]; malformed?: { li
       continue;
     }
     if (c === '\r' && text[i + 1] === '\n') continue;
+    if (c === '\r') return { records, malformed: { line, detail: `bare carriage return outside a quoted field (record starting at line ${start})` } };
     if (c === '\n') { endRecord(); line++; start = line; state = 'start'; continue; }
     if (c === ',') { fields.push(cur); cur = ''; state = 'start'; continue; }
     if (state === 'after') return { records, malformed: { line, detail: `text after the closing quote of a field (record starting at line ${start})` } };

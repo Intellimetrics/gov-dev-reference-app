@@ -33,11 +33,16 @@ export function singleStatement(query: string): string {
   for (let i = 0; i < query.length;) {
     const c = query[i];
     if (c === "'" || c === '"' || c === '[') {
-      const close = c === '[' ? ']' : c; i++;
-      while (i < query.length && !(query[i] === close && (close === ']' || query[i + 1] !== close))) i += query[i] === close ? 2 : 1;
+      const close = c === '[' ? ']' : c; i++;   // a doubled closer ('' or ]]) is an escaped character, not the end
+      while (i < query.length && !(query[i] === close && query[i + 1] !== close)) i += query[i] === close ? 2 : 1;
       i++; end = i;
     } else if (query.startsWith('--', i)) { while (i < query.length && query[i] !== '\n') i++; }
-    else if (query.startsWith('/*', i)) { const e = query.indexOf('*/', i + 2); i = e < 0 ? query.length : e + 2; }
+    else if (query.startsWith('/*', i)) {         // T-SQL block comments nest
+      let depth = 1; i += 2;
+      while (i < query.length && depth > 0) {
+        if (query.startsWith('/*', i)) { depth++; i += 2; } else if (query.startsWith('*/', i)) { depth--; i += 2; } else i++;
+      }
+    }
     else { if (c === ';') semis.push(i); if (!/\s/.test(c)) end = i + 1; i++; }
   }
   const trailing = semis.length > 0 && semis[semis.length - 1] === end - 1;

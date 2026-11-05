@@ -92,3 +92,13 @@ describe('shape change', () => {
     expect(shapeChange(['A', 'B'], ['A'])).toEqual(['- B']);
   });
 });
+
+describe('singleStatement edges', () => {
+  it('accepts escaped ]] in a bracketed name and semicolons in nested comments', () => {
+    expect(singleStatement('SELECT [a]];b] FROM t;')).toBe('SELECT [a]];b] FROM t');
+    expect(singleStatement('SELECT 1 /* outer /* inner; */ still; */ AS x')).toBe('SELECT 1 /* outer /* inner; */ still; */ AS x');
+  });
+  it('still refuses two statements', () => {
+    expect(() => singleStatement('SELECT 1; SELECT 2')).toThrow(/more than one statement/);
+  });
+});

@@ -108,7 +108,8 @@ export function analyzeSql(sql: string, schema: Schema, canon: (name: string) =>
     const m = s.match(/^insert\s+into\s+(\S+)\s*(?:\(([^)]*)\))?\s*(.*)$/i);
     if (!m) { use.unparsed = 'an INSERT it cannot split'; return use; }
     const t = canon(m[1]);
-    if (t) {
+    if (t && !(t in schema)) { use.unparsed ??= `${m[1]} resolves to ${t}, a table outside the schema snapshot`; use.others.push(m[1]); }
+    else if (t) {
       tableOf(m[1]);
       if (m[2]) for (const c of m[2].split(',')) addCol(t, c.trim(), 'write');
       else { use.tables[t].positionalInsert = true; schema[t].forEach((c) => use.tables[t].write.add(c)); }

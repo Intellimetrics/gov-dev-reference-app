@@ -113,4 +113,10 @@ describe('a linked table whose target is not in the schema snapshot', () => {
     expect(u.unparsed).toContain('dbo.Unseen');
     expect(u.tables).toEqual({});
   });
+  it('an INSERT into that link is also unparsed, not a crash', () => {
+    for (const q of ['INSERT INTO dbo_Unseen VALUES (1)', 'INSERT INTO dbo_Unseen (CaseId) VALUES (1)']) {
+      const u = analyzeSql(q, schema, makeCanon(schema, { dbo_unseen: 'dbo.Unseen' }));
+      expect(u.unparsed).toContain('dbo.Unseen');
+    }
+  });
 });
