@@ -50,3 +50,7 @@ The cloud adapters (`src/platform/azure`, `aws` and `google`) and the deploy scr
 ## Where it comes from
 
 This repository is published from the course's source, so changes are made there and published here. Issues and corrections are welcome.
+
+## License
+
+[MIT](LICENSE). Adapt it for your agency freely; the notice in `LICENSE` travels with copies.
