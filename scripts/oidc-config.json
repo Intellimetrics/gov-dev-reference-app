@@ -1,0 +1,16 @@
+{
+  "interactiveLogin": false,
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 300,
+      "requestMappings": [
+        {
+          "requestParam": "client_id",
+          "match": "m14-local",
+          "claims": { "sub": "caseworker-0042", "aud": ["m14-local"], "name": "Test Caseworker", "roles": ["Intake.Operator"] }
+        }
+      ]
+    }
+  ]
+}

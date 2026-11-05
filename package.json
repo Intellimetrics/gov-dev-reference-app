@@ -1,0 +1,27 @@
+{
+  "name": "m14-reference",
+  "private": true,
+  "type": "module",
+  "description": "Runnable reference for Module 14 (Government Dev) lesson code: the platform seam and its local implementation. Lesson excerpts are checked against these files (scripts/check-m14-excerpts.mjs).",
+  "scripts": {
+    "test": "vitest run tests/unit",
+    "test:env": "M14_ENV=1 vitest run tests/env",
+    "local:up": "bash scripts/local-up.sh",
+    "local:down": "bash scripts/local-down.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.301.0",
+    "@opentelemetry/resources": "^3.1.0",
+    "@opentelemetry/sdk-node": "^0.301.0",
+    "mssql": "12.7.0",
+    "openid-client": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/mssql": "^12.3.0",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

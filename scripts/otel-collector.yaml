@@ -1,0 +1,15 @@
+# Local collector for lesson 16: receives OTLP from the app and prints it.
+# Platform lessons replace the exporters block; the app does not change.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  debug:
+    verbosity: detailed
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
