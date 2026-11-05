@@ -6,7 +6,7 @@ import { localPlatform } from './local/index.ts';
 
 const loaders: Record<string, () => Promise<Platform>> = {
   local: async () => localPlatform,
-  // azure: () => import('./azure/index.ts').then((m) => m.azurePlatform),   // lesson 34
+  azure: () => import('./azure/index.ts').then((m) => m.azurePlatform),      // lesson 34
   // aws: () => import('./aws/index.ts').then((m) => m.awsPlatform),         // lesson 35
   // google: () => import('./google/index.ts').then((m) => m.googlePlatform), // lesson 36
 };
