@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { diffMultiset, normalizedQuery, asText } from '../../src/modernization/reports/dataset.ts';
+import { diffMultiset, normalizedQuery, asText, singleStatement } from '../../src/modernization/reports/dataset.ts';
 import { inventory, objectsNamed } from '../../src/modernization/reports/rdl.ts';
 import { shapeChange } from '../../src/modernization/reports/shape.ts';
 
@@ -35,7 +35,30 @@ describe('exact-type normalization', () => {
   });
 });
 
+describe('one statement per dataset', () => {
+  const cols = [{ name: 'CaseId', type: 'int' }];
+  it('drops one trailing semicolon, with trailing whitespace and comments', () => {
+    expect(singleStatement('SELECT CaseId FROM dbo.Intake;')).toBe('SELECT CaseId FROM dbo.Intake');
+    expect(singleStatement('SELECT CaseId FROM dbo.Intake ; -- done\n/* x */\n')).toBe('SELECT CaseId FROM dbo.Intake');
+    expect(normalizedQuery('SELECT CaseId FROM dbo.Intake;', cols)).toContain('FROM (\nSELECT CaseId FROM dbo.Intake\n) AS dataset');
+  });
+  it('keeps a semicolon inside a string or comment', () => {
+    expect(singleStatement("SELECT ';' AS S -- a;b")).toBe("SELECT ';' AS S");
+  });
+  it('refuses multi-statement text', () => {
+    expect(() => singleStatement('SELECT 1; SELECT 2;')).toThrow(/more than one statement/);
+    expect(() => normalizedQuery('SET NOCOUNT ON; SELECT 1', cols)).toThrow(/more than one statement/);
+  });
+});
+
 describe('RDL inventory', () => {
+  it('leaves CDATA content literal and decodes entities only outside it', () => {
+    const xml = `<DataSet Name="A"><Query><DataSourceName>D</DataSourceName><CommandText><![CDATA[SELECT '&amp;' AS X, a <> b]]></CommandText></Query></DataSet>`
+      + `<DataSet Name="B"><Query><DataSourceName>D</DataSourceName><CommandText>SELECT '&amp;' AS X WHERE a &lt;&gt; b</CommandText></Query></DataSet>`;
+    const [a, b] = inventory(xml).datasets;
+    expect(a.commandText).toBe("SELECT '&amp;' AS X, a <> b");
+    expect(b.commandText).toBe("SELECT '&' AS X WHERE a <> b");
+  });
   const inv = inventory(rdl);
   it('finds every live dataset and ignores the commented-out one', () => {
     expect(inv.datasets.map((d) => d.name)).toEqual(['DailyIntake', 'CaseTypeTotals', 'WaitingOver30']);

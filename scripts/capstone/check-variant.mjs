@@ -19,7 +19,7 @@ const FIELDS = Object.keys(registry.fields);
 for (const k of Object.keys(variant)) if (!FIELDS.includes(k)) problems.push(`variant.json: unknown field "${k}"`);
 for (const k of FIELDS) {
   if (!(k in variant)) problems.push(`variant.json: missing "${k}" (one of: ${Object.keys(registry.fields[k]).join(', ')})`);
-  else if (!(variant[k] in registry.fields[k])) problems.push(`variant.json: ${k} "${variant[k]}" is not supported (one of: ${Object.keys(registry.fields[k]).join(', ')})`);
+  else if (typeof variant[k] !== 'string' || !Object.hasOwn(registry.fields[k], variant[k])) problems.push(`variant.json: ${k} "${variant[k]}" is not supported (one of: ${Object.keys(registry.fields[k]).join(', ')})`);
 }
 for (const rule of registry.incompatible) {
   const applies = Object.entries(rule.when).every(([k, v]) => variant[k] === v);

@@ -60,7 +60,8 @@ export function reduce(c: Case, e: CaseEvent, rules: Rules): Outcome {
     const why = GUARDS[g](e);
     if (why) return { case: c, refused: why };
   }
-  const next: Case = { ...c, state: move.to, assignee: e.assignee ?? c.assignee };
+  const assigns = e.type === 'assign' || e.type === 'reassign';  // only these two events may change the assignee
+  const next: Case = { ...c, state: move.to, assignee: assigns ? (e.assignee ?? c.assignee) : c.assignee };
   if (move.to !== c.state) {                                    // a reassignment keeps its deadline (R-62, a legacy quirk)
     const spec = TIMERS[move.to];
     next.timers = spec ? [arm(spec, e.at, rules)] : [];

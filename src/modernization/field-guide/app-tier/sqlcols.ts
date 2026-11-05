@@ -59,7 +59,8 @@ export function analyzeSql(sql: string, schema: Schema, canon: (name: string) =>
       const t = head.trim().split(/\s+/);
       if (!t[0]) continue;
       const alias = t[1]?.toLowerCase() === 'as' ? t[2] : t[1];
-      const c = canon(t[0]) ?? null;
+      let c = canon(t[0]) ?? null;
+      if (c && !(c in schema)) { use.unparsed ??= `${t[0]} resolves to ${c}, a table outside the schema snapshot`; c = null; }   // a link to a table the snapshot lacks
       if (c) tableOf(t[0]); else use.others.push(t[0]);
       amap.set((alias ?? t[0].split('.').pop()!).toLowerCase(), c);
       amap.set(t[0].split('.').pop()!.toLowerCase(), c);

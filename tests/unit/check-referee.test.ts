@@ -31,6 +31,14 @@ describe('github', () => {
     const r = repo('github', { '.github/CODEOWNERS': owners('github', '@agency/intake-owners', '/tests/parity/replay.test.ts @intake-parity-agent') });
     expect(r.code).toBe(1); expect(r.out).toMatch(/inside referee path tests\/parity\//);
   });
+  it('accepts a leading * default line and directory rules without a trailing slash', () => {
+    const body = '* @agency/app-reviewers\n' + [...COMMON, ...HOST_PATHS.github].map((p) => `/${p.replace(/\/$/, '')} @agency/intake-owners`).join('\n');
+    expect(repo('github', { '.github/CODEOWNERS': body }).code).toBe(0);
+  });
+  it('a * default owned by a person does not count for paths a team line covers, but fails where it is the last match', () => {
+    const body = '* @jdoe\n' + [...COMMON, ...HOST_PATHS.github].filter((p) => p !== 'package.json').map((p) => `/${p} @agency/intake-owners`).join('\n');
+    expect(repo('github', { '.github/CODEOWNERS': body }).out).toMatch(/package.json: effective owners \(\*\) are not all teams/);
+  });
   it('fails when the referee list shrinks', () => {
     const r = repo('github', { '.github/CODEOWNERS': owners('github', '@agency/intake-owners') }, COMMON.slice(1).concat(HOST_PATHS.github));
     expect(r.out).toMatch(/missing tests\/differential\//);
@@ -47,6 +55,11 @@ describe('gitlab', () => {
     const body = '^[Referee] @agency/intake-owners\n' + [...COMMON, ...HOST_PATHS.gitlab].map((p) => `/${p}`).join('\n');
     const r = repo('gitlab', { ...teams, CODEOWNERS: body });
     expect(r.code).toBe(1); expect(r.out).toMatch(/no required CODEOWNERS section covers/);
+  });
+  it('treats two sections with the same name as one section', () => {
+    const half = [...COMMON, ...HOST_PATHS.gitlab];
+    const body = '[Referee] @agency/intake-owners\n' + half.slice(0, 5).map((p) => `/${p}`).join('\n') + '\n[Referee] @agency/intake-owners\n' + half.slice(5).map((p) => `/${p}`).join('\n');
+    expect(repo('gitlab', { ...teams, CODEOWNERS: body }).code).toBe(0);
   });
   it('fails when another section gives a path to an owner that is not a listed team', () => {
     const body = owners('gitlab', '@agency/intake-owners') + '\n[Fast lane]\n/tests/parity/ @jdoe';
@@ -68,7 +81,7 @@ describe('azure-devops', () => {
   const T = 'fd2167ab-b0be-447a-8ec8-39368250530e';
   const GROUP = '3c4b7f1e-0000-4000-8000-00000000abcd';
   const policy = (paths: string[], over: object = {}) => ({ id: 7, isEnabled: true, isBlocking: true, isDeleted: false, type: { id: T },
-    settings: { requiredReviewerIds: [GROUP], filenamePatterns: paths.map((p) => (p.endsWith('/') ? `/${p}*` : `/${p}`)) }, ...over });
+    settings: { requiredReviewerIds: [GROUP], filenamePatterns: paths.map((p) => (p.endsWith('/') ? `/${p}*` : `/${p}`)), scope: [{ refName: 'refs/heads/main', matchKind: 'exact', repositoryId: null }] }, ...over });
   const files = (pol: object[]) => ({ 'modernization/owner-teams.txt': GROUP, 'ci-out/branch-policies.json': JSON.stringify(pol) });
   const all = [...COMMON, ...HOST_PATHS['azure-devops']];
   it('passes when blocking required-reviewer policies cover every path with a listed group', () => expect(repo('azure-devops', files([policy(all)])).code).toBe(0));
@@ -76,8 +89,12 @@ describe('azure-devops', () => {
     expect(repo('azure-devops', files([policy(all, { isBlocking: false })])).out).toMatch(/no enabled, blocking required-reviewer policy covers/);
   });
   it('fails when a policy names a reviewer that is not a listed group', () => {
-    expect(repo('azure-devops', files([policy(all), { ...policy(['tests/parity/']), id: 8, settings: { requiredReviewerIds: ['someone'], filenamePatterns: ['/tests/parity/*'] } }])).out)
+    expect(repo('azure-devops', files([policy(all), { ...policy(['tests/parity/']), id: 8, settings: { requiredReviewerIds: ['someone'], filenamePatterns: ['/tests/parity/*'], scope: [{ refName: 'refs/heads/main', matchKind: 'exact', repositoryId: null }] } }])).out)
       .toMatch(/policy 8 names reviewers/);
+  });
+  it('fails when the policy applies to another branch than the protected one', () => {
+    const other = policy(all, { settings: { requiredReviewerIds: [GROUP], filenamePatterns: all.map((p) => (p.endsWith('/') ? `/${p}*` : `/${p}`)), scope: [{ refName: 'refs/heads/feature/x', matchKind: 'exact', repositoryId: null }] } });
+    expect(repo('azure-devops', files([other])).out).toMatch(/no enabled, blocking required-reviewer policy covers/);
   });
   it('fails without the exported policies', () => expect(repo('azure-devops', { 'modernization/owner-teams.txt': GROUP }).out).toMatch(/export the branch policies/));
 });

@@ -25,9 +25,29 @@ export function asText(c: Column): string {
   throw new Error(`${c.name}: type ${c.type} has no lossless text form here; add one and a test before trusting a match`);
 }
 
-// The dataset's own query becomes a derived table, so the report's SQL runs unchanged and every column leaves as text.
+// One statement only, because a derived table cannot hold more. Strips trailing whitespace, trailing comments and one
+// trailing semicolon; any other semicolon outside a string or comment means several statements, and is refused.
+export function singleStatement(query: string): string {
+  let end = 0;                                   // end of the last code character
+  const semis: number[] = [];
+  for (let i = 0; i < query.length;) {
+    const c = query[i];
+    if (c === "'" || c === '"' || c === '[') {
+      const close = c === '[' ? ']' : c; i++;
+      while (i < query.length && !(query[i] === close && (close === ']' || query[i + 1] !== close))) i += query[i] === close ? 2 : 1;
+      i++; end = i;
+    } else if (query.startsWith('--', i)) { while (i < query.length && query[i] !== '\n') i++; }
+    else if (query.startsWith('/*', i)) { const e = query.indexOf('*/', i + 2); i = e < 0 ? query.length : e + 2; }
+    else { if (c === ';') semis.push(i); if (!/\s/.test(c)) end = i + 1; i++; }
+  }
+  const trailing = semis.length > 0 && semis[semis.length - 1] === end - 1;
+  if (semis.length > (trailing ? 1 : 0)) throw new Error('the dataset holds more than one statement; compare each statement as its own dataset');
+  return query.slice(0, trailing ? end - 1 : end).trimEnd();
+}
+
+// The dataset's own query becomes a derived table, so the report's SQL runs unchanged apart from one trailing semicolon, and every column leaves as text.
 export function normalizedQuery(query: string, cols: Column[]): string {
-  return `SELECT ${cols.map((c) => `${asText(c)} AS [${c.name}]`).join(', ')} FROM (\n${query}\n) AS dataset`;
+  return `SELECT ${cols.map((c) => `${asText(c)} AS [${c.name}]`).join(', ')} FROM (\n${singleStatement(query)}\n) AS dataset`;
 }
 
 // What the dataset returns, asked of the server instead of guessed: names and base type names, in order.

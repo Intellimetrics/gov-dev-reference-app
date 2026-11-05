@@ -430,5 +430,89 @@
    "escalations": 5,
    "timers": []
   }
+ },
+ {
+  "caseId": "H-1008",
+  "openedAt": "2026-11-02T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-02T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T11:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T11:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-03T09:00:00.000Z",
+    "type": "request_documents",
+    "by": "b.ortiz",
+    "after": {
+     "state": "AwaitingDocuments",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "docs_due",
+       "dueAt": "2026-11-18T09:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-04T09:00:00.000Z",
+    "type": "documents_received",
+    "by": "applicant",
+    "assignee": "triage-agent",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-12T09:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-11-13T09:00:00.000Z",
+  "final": {
+   "state": "Assigned",
+   "assignee": "b.ortiz",
+   "escalations": 1,
+   "timers": [
+    {
+     "kind": "work_sla",
+     "dueAt": "2026-11-16T09:00:00.000Z"
+    }
+   ]
+  }
  }
 ]

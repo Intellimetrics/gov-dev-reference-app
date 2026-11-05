@@ -37,9 +37,18 @@ describe('inventory from catalog snapshots', () => {
   });
 
   it('accounts for every row it read: cited, skipped with a reason, or an unknown', () => {
-    expect(inv.rowsRead).toBe(15 + 1 + 4 + 8);
+    const given = ['oracle-all-dependencies.csv', 'oracle-view-text.csv', 'oracle-scheduler-jobs.csv', 'db2-syspackdep.csv'].reduce((n, f) => n + parseCsv(f, read(f)).length, 0);
+    expect(inv.rowsRead).toBe(given);                       // every row of the files it was given, counted from the files
     expect(accounted(inv)).toBe(inv.rowsRead);
-    expect(renderCoverage(inv)).toContain('28 rows read');
+    expect(renderCoverage(inv)).toContain(`${inv.rowsRead} rows read`);
+  });
+
+  it('counts a row once even when two sets cite it, so the double count cannot hide a missing row', () => {
+    const cited = inv.dependents[0].evidence[0];
+    const lost = inv.skipped[0];
+    const doubled = { ...inv, unknowns: [...inv.unknowns, { id: 'U-99', what: 'x', evidence: [cited], whoCanSay: 'x' }], skipped: inv.skipped.slice(1) };
+    expect(doubled.skipped).not.toContain(lost);
+    expect(accounted(doubled)).toBe(inv.rowsRead - 1);      // the old sum read rowsRead here and passed
   });
 
   it('does not treat a row through a database link as a dependent on the local table', () => {

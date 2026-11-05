@@ -1,4 +1,4 @@
-// Business-day arithmetic for SLA timers. Everything is UTC; the holiday list is data the office owns.
+// Business-day arithmetic for SLA timers. Everything is UTC (weekday and holiday are read from the UTC date, U-61); the holiday list is data the office owns.
 export type Calendar = { holidays: ReadonlySet<string> };      // 'YYYY-MM-DD'
 
 export function isBusinessDay(d: Date, cal: Calendar): boolean {
@@ -6,7 +6,7 @@ export function isBusinessDay(d: Date, cal: Calendar): boolean {
   return weekday !== 0 && weekday !== 6 && !cal.holidays.has(d.toISOString().slice(0, 10));
 }
 
-/** n business days after `from`, same time of day. A Saturday start counts from the next business day. */
+/** n business days after `from`, same time of day. The count starts the day after `from`, so a Saturday plus 1 business day is Monday. */
 export function addBusinessDays(from: Date, n: number, cal: Calendar): Date {
   const d = new Date(from);
   for (let left = n; left > 0; ) {

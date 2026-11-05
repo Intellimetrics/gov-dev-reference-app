@@ -14,7 +14,8 @@ export interface Inventory { datasets: Dataset[]; reportParameters: string[]; su
 
 const ENTITIES: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
 const decode = (s: string) => s.replace(/&(lt|gt|amp|quot|apos);|&#(\d+);/g, (_, n, d) => (n ? ENTITIES[n] : String.fromCharCode(Number(d))));
-const unCdata = (s: string) => s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+// CDATA content is literal: entities are decoded only in the text outside the CDATA sections.
+const text = (s: string) => s.split(/(<!\[CDATA\[[\s\S]*?\]\]>)/).map((part) => (part.startsWith('<![CDATA[') ? part.slice(9, -3) : decode(part))).join('');
 const tag = (xml: string, name: string) => xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`))?.[1];
 
 export function inventory(rdl: string): Inventory {
@@ -24,16 +25,16 @@ export function inventory(rdl: string): Inventory {
     const query = tag(m[2], 'Query') ?? '';
     const raw = tag(query, 'CommandText');
     if (raw === undefined) continue;                                // a shared-dataset reference has no command text here
-    const text = decode(unCdata(raw)).trim();
+    const cmd = text(raw).trim();
     datasets.push({
       name: m[1],
       dataSource: decode(tag(query, 'DataSourceName') ?? ''),
       commandType: (tag(query, 'CommandType') ?? 'Text') as Dataset['commandType'],
-      commandText: text,
-      isExpression: text.startsWith('='),
+      commandText: cmd,
+      isExpression: cmd.startsWith('='),
       parameters: [...query.matchAll(/<QueryParameter\s+Name="([^"]+)"\s*>([\s\S]*?)<\/QueryParameter>/g)]
         .map((p) => ({ name: decode(p[1]), value: decode(tag(p[2], 'Value') ?? '') })),
-      selectStar: /\bselect\s+(?:top\s*\(?\s*\d+\s*\)?\s+)?(?:\w+\.)?\*/i.test(text),
+      selectStar: /\bselect\s+(?:top\s*\(?\s*\d+\s*\)?\s+)?(?:\w+\.)?\*/i.test(cmd),
     });
   }
   return {

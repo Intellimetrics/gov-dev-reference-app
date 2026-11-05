@@ -2,12 +2,14 @@
   {
     "name": "CaseId",
     "type": "text",
-    "length": 8
+    "length": 8,
+    "trim": true
   },
   {
     "name": "CaseType",
     "type": "text",
-    "length": 10
+    "length": 10,
+    "trim": true
   },
   {
     "name": "HouseholdSize",

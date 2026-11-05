@@ -26,6 +26,23 @@ describe('Login.gov sign-in: the authorization request', () => {
     expect(p.get('nonce')).toBe(pending.nonce);
   });
 
+  it('carries what the Login.gov page lists as required: prompt=select_account, response_type=code, openid scope, 22+ character state and nonce', async () => {
+    const { url } = await startPortalLogin(config, identity, 'https://status.example.gov/callback', { identity: IDENTITY.authOnly });
+    const p = url.searchParams;
+    expect(p.get('prompt')).toBe('select_account');
+    expect(p.get('response_type')).toBe('code');
+    expect(p.get('scope')!.split(' ')).toContain('openid');
+    expect(p.get('state')!.length).toBeGreaterThanOrEqual(22);
+    expect(p.get('nonce')!.length).toBeGreaterThanOrEqual(22);
+    expect(p.get('acr_values')).toBe('urn:acr.login.gov:auth-only');
+  });
+
+  it('the hspd12 value is the one that requires PIV/CAC, and it is passed through to the request', async () => {
+    const { url } = await startPortalLogin(config, identity, 'https://status.example.gov/callback',
+      { identity: IDENTITY.verified, authenticator: AUTHENTICATOR.hspd12 });
+    expect(url.searchParams.get('acr_values')).toContain('aal/2?hspd12=true');
+  });
+
   it('sends the identity value alone when no authenticator is asked for', () => {
     expect(acrValues({ identity: IDENTITY.authOnly })).toBe('urn:acr.login.gov:auth-only');
   });

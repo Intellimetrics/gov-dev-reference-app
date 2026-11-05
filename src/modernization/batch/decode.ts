@@ -27,26 +27,36 @@ export function encodeEbcdic037(text: string): Uint8Array {
 
 // COMP-3: two decimal digits per byte, the last nibble is the sign. C and F are positive
 // (F means unsigned), D is negative. Other sign nibbles are refused, not guessed.
-export function decodeComp3(bytes: Uint8Array, scale = 0): string {
+// With `digits` (the layout's declared digit count) the field must be exactly the bytes that
+// count needs, and when the count is even the leading nibble is padding and must be 0.
+// Negative zero (a D sign on a value of zero) is accepted and decoded as plain zero, so
+// -0 and 0 are the same value downstream; encodeComp3 writes zero with a C sign to match.
+export function decodeComp3(bytes: Uint8Array, scale = 0, digits?: number): string {
   if (bytes.length === 0) throw new DecodeError('empty COMP-3 field');
-  let digits = '';
+  if (digits !== undefined && bytes.length !== Math.floor(digits / 2) + 1) {
+    throw new DecodeError(`${digits} digits need ${Math.floor(digits / 2) + 1} bytes, field has ${bytes.length}`);
+  }
+  let digitText = '';
   for (let i = 0; i < bytes.length; i++) {
     const hi = bytes[i] >> 4;
     const lo = bytes[i] & 0x0f;
     if (hi > 9) throw new DecodeError(`byte ${i}: high nibble 0x${hi.toString(16).toUpperCase()} is not a digit`);
-    digits += hi;
+    digitText += hi;
     if (i < bytes.length - 1) {
       if (lo > 9) throw new DecodeError(`byte ${i}: low nibble 0x${lo.toString(16).toUpperCase()} is not a digit`);
-      digits += lo;
+      digitText += lo;
     }
   }
   const sign = bytes[bytes.length - 1] & 0x0f;
   if (sign !== 0xc && sign !== 0xd && sign !== 0xf) {
     throw new DecodeError(`sign nibble 0x${sign.toString(16).toUpperCase()} is not C, D or F`);
   }
-  digits = digits.padStart(scale + 1, '0');
-  const whole = digits.slice(0, digits.length - scale).replace(/^0+(?=\d)/, '');
-  const text = scale > 0 ? `${whole}.${digits.slice(digits.length - scale)}` : whole;
+  if (digits !== undefined && digitText.length > digits && digitText[0] !== '0') {
+    throw new DecodeError(`${digits} digits declared, but the padding nibble is 0x${digitText[0]} and the value does not fit`);
+  }
+  digitText = digitText.padStart(scale + 1, '0');
+  const whole = digitText.slice(0, digitText.length - scale).replace(/^0+(?=\d)/, '');
+  const text = scale > 0 ? `${whole}.${digitText.slice(digitText.length - scale)}` : whole;
   return sign === 0xd && /[1-9]/.test(text) ? `-${text}` : text;
 }
 
@@ -58,7 +68,7 @@ export function encodeComp3(value: string, digitCount: number, scale = 0): Uint8
   const all = (m[2] + frac).replace(/^0+(?=\d)/, '').padStart(digitCount, '0');
   if (all.length > digitCount) throw new DecodeError(`${value} needs more than ${digitCount} digits`);
   const nibbles = [...all].map(Number);
-  nibbles.push(m[1] === '-' ? 0xd : 0xc);
+  nibbles.push(m[1] === '-' && /[1-9]/.test(all) ? 0xd : 0xc);
   if (nibbles.length % 2 === 1) nibbles.unshift(0);
   const out = new Uint8Array(nibbles.length / 2);
   for (let i = 0; i < out.length; i++) out[i] = (nibbles[2 * i] << 4) | nibbles[2 * i + 1];
@@ -66,13 +76,29 @@ export function encodeComp3(value: string, digitCount: number, scale = 0): Uint8
 }
 
 export type FieldSpec =
-  | { name: string; type: 'text'; length: number }
+  // `trim` is explicit: true drops trailing spaces (the EBCDIC pad), false keeps the field exactly
+  // as written, because a trailing blank can be data (a parity case the lesson lists).
+  | { name: string; type: 'text'; length: number; trim: boolean }
   | { name: string; type: 'comp3'; digits: number; scale?: number };
 
 const width = (f: FieldSpec) => (f.type === 'text' ? f.length : Math.floor(f.digits / 2) + 1);
 
+export function validateLayout(layout: FieldSpec[]): void {
+  const seen = new Set<string>();
+  for (const f of layout) {
+    if (seen.has(f.name)) throw new DecodeError(`layout names field ${f.name} twice`);
+    seen.add(f.name);
+    if (f.type === 'text' ? !Number.isInteger(f.length) || f.length < 1 : !Number.isInteger(f.digits) || f.digits < 1) {
+      throw new DecodeError(`field ${f.name}: length or digits must be a positive integer`);
+    }
+    if (f.type === 'text' && typeof f.trim !== 'boolean') throw new DecodeError(`field ${f.name}: trim must be stated, true or false`);
+    if (f.type === 'comp3' && (f.scale ?? 0) > f.digits) throw new DecodeError(`field ${f.name}: scale ${f.scale} exceeds ${f.digits} digits`);
+  }
+}
+
 // A fixed-length record file, no delimiters, as the mainframe wrote it.
 export function decodeRecords(file: Uint8Array, layout: FieldSpec[]): Record<string, string>[] {
+  validateLayout(layout);
   const size = layout.reduce((n, f) => n + width(f), 0);
   if (file.length % size !== 0) throw new DecodeError(`file is ${file.length} bytes, not a multiple of the ${size}-byte record`);
   const rows: Record<string, string>[] = [];
@@ -82,7 +108,9 @@ export function decodeRecords(file: Uint8Array, layout: FieldSpec[]): Record<str
     for (const f of layout) {
       const raw = file.subarray(o, o + width(f));
       try {
-        row[f.name] = f.type === 'text' ? decodeEbcdic037(raw).trimEnd() : decodeComp3(raw, f.scale ?? 0);
+        row[f.name] = f.type === 'text'
+          ? (f.trim ? decodeEbcdic037(raw).replace(/ +$/, '') : decodeEbcdic037(raw))
+          : decodeComp3(raw, f.scale ?? 0, f.digits);
       } catch (e) {
         throw new DecodeError(`record ${at / size + 1}, field ${f.name}: ${(e as Error).message}`);
       }

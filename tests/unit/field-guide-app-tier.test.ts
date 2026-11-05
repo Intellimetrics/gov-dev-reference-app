@@ -105,3 +105,12 @@ describe('a column that is not in the schema snapshot', () => {
     expect(u.unresolved).toEqual(['dbo.Intake.HouseholdSz']);
   });
 });
+
+describe('a linked table whose target is not in the schema snapshot', () => {
+  const schema = loadSchema(DEFAULT_ROOT);
+  it('comes back unparsed instead of throwing, so discovery can list it as an unknown', () => {
+    const u = analyzeSql('SELECT CaseId FROM dbo_Unseen', schema, makeCanon(schema, { dbo_unseen: 'dbo.Unseen' }));
+    expect(u.unparsed).toContain('dbo.Unseen');
+    expect(u.tables).toEqual({});
+  });
+});

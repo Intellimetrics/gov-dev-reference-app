@@ -2,6 +2,7 @@
   "key": "CaseId",
   "columns": ["CaseId", "CaseType", "Status", "SubmittedAt"],
   "ordered": false,
+  "quoting": { "rule": "rfc4180-minimal", "status": "the new job's decision D-50, not parity: how the legacy export writes a comma, quote or line break is unrecorded (U-53)" },
   "tolerances": [
     { "column": "SubmittedAt", "kind": "timestamp", "withinMs": 1, "reason": "the legacy job writes datetime2 text with seven fractional digits, the new job writes ISO-8601 UTC to the millisecond; the same instant to the millisecond is equal" }
   ]

@@ -44,6 +44,7 @@ describe('capstone variant', () => {
   });
   it('refuses an unsupported value, a missing field, an unknown field, and an incompatible pair', () => {
     expect(run({ ...baseline, appType: 'mainframe-ui' }).out).toMatch(/appType "mainframe-ui" is not supported/);
+    expect(run({ ...baseline, appType: 'toString' }).out).toMatch(/appType "toString" is not supported/);
     const { appType, ...noApp } = baseline;
     expect(run(noApp).out).toMatch(/missing "appType"/);
     expect(run({ ...baseline, skipChecks: ['mutation'] }).out).toMatch(/unknown field "skipChecks"/);

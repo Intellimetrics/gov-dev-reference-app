@@ -1,0 +1,19 @@
+[
+ {
+  "caseId": "H-1009",
+  "openedAt": "2026-11-07T02:00:00.000Z",
+  "events": [],
+  "asOf": "2026-11-10T20:00:00.000Z",
+  "final": {
+   "state": "Submitted",
+   "assignee": null,
+   "escalations": 0,
+   "timers": [
+    {
+     "kind": "triage_sla",
+     "dueAt": "2026-11-11T02:00:00.000Z"
+    }
+   ]
+  }
+ }
+]

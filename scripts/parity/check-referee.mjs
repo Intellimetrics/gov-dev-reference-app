@@ -40,16 +40,26 @@ for (const p of MUST_PROTECT) if (!referee.includes(p)) problems.push(`referee-p
 const teams = existsSync(at('modernization/owner-teams.txt')) ? new Set(lines('modernization/owner-teams.txt')) : new Set();
 const isTeam = (o) => (HOST === 'github' ? /^@[\w.-]+\/[\w.-]+$/.test(o) : teams.has(o));
 const badOwners = (owners) => owners.length === 0 || owners.some((o) => !isTeam(o) || AGENT_ACCOUNTS.includes(o));
-const covers = (pattern, path) => pattern === `/${path}` || (pattern.endsWith('/') && `/${path}`.startsWith(pattern));
-const inside = (pattern, dir) => dir.endsWith('/') && pattern.startsWith(`/${dir}`);
+// `*` (the usual default line) covers everything; `/dir` and `/dir/` both cover the directory and its contents.
+const covers = (pattern, path) => {
+  if (pattern === '*') return true;
+  const p = pattern.replace(/\/$/, ''), f = `/${path}`.replace(/\/$/, '');
+  return f === p || f.startsWith(`${p}/`);
+};
+const inside = (pattern, dir) => dir.endsWith('/') && pattern !== '*' && pattern.startsWith(`/${dir}`) && pattern.length > dir.length + 1;
 
 if (HOST === 'azure-devops') {
-  // Export first: az repos policy list --branch main --output json > ci-out/branch-policies.json
+  // Export first, for the protected branch: az repos policy list --branch "$REFEREE_BRANCH" --output json > ci-out/branch-policies.json
   const REQUIRED_REVIEWERS = 'fd2167ab-b0be-447a-8ec8-39368250530e';   // the policy type id
   const f = 'ci-out/branch-policies.json';
   if (!existsSync(at(f))) { console.error(`no ${f}: export the branch policies first`); process.exit(1); }
+  // A policy counts only if it applies to the protected branch (and, if REPO_ID is set, this repository).
+  const branch = `refs/heads/${process.env.REFEREE_BRANCH ?? 'main'}`.toLowerCase();
+  const inScope = (p) => (p.settings?.scope ?? []).some((s) =>
+    (s.repositoryId == null || !process.env.REPO_ID || s.repositoryId === process.env.REPO_ID) &&
+    (String(s.matchKind).toLowerCase() === 'prefix' ? branch.startsWith(String(s.refName).toLowerCase()) : String(s.refName).toLowerCase() === branch));
   const policies = JSON.parse(readFileSync(at(f), 'utf8'))
-    .filter((p) => p.type?.id === REQUIRED_REVIEWERS && p.isEnabled && p.isBlocking && !p.isDeleted);
+    .filter((p) => p.type?.id === REQUIRED_REVIEWERS && p.isEnabled && p.isBlocking && !p.isDeleted && inScope(p));
   // Only exact paths and "dir/*" filters are read here; anything else needs a person.
   const filterCovers = (pat, path) => {
     const p = pat.startsWith('/') ? pat : `/${pat}`;
@@ -76,11 +86,12 @@ if (HOST === 'azure-devops') {
     const [pattern, ...owners] = l.split(/\s+/);
     rules.push({ pattern, owners: owners.length ? owners : section.defaults, section });
   }
-  for (const r of rules) if (/[*?[\]!]/.test(r.pattern) || !r.pattern.startsWith('/')) problems.push(`CODEOWNERS ${r.pattern}: only root-anchored paths are supported here`);
+  for (const r of rules) if (r.pattern !== '*' && (/[*?[\]!]/.test(r.pattern) || !r.pattern.startsWith('/'))) problems.push(`CODEOWNERS ${r.pattern}: only "*" and root-anchored paths are supported here`);
   for (const path of referee) {
     // Last matching line wins, within each section (GitLab evaluates every section).
-    const effective = [...new Set(rules.map((r) => r.section))]
-      .map((s) => rules.filter((r) => r.section === s && covers(r.pattern, path)).at(-1)).filter(Boolean);
+    // Sections with the same name are one section (GitLab merges them).
+    const effective = [...new Set(rules.map((r) => r.section.name))]
+      .map((n) => rules.filter((r) => r.section.name === n && covers(r.pattern, path)).at(-1)).filter(Boolean);
     if (!effective.some((r) => !r.section.optional)) problems.push(`${path}: no required CODEOWNERS section covers it`);
     for (const r of effective) if (badOwners(r.owners)) problems.push(`${path}: effective owners (${r.pattern}${r.section.name === '(none)' ? '' : ` in [${r.section.name}]`}) are not all teams, or include the agent`);
     for (const r of rules.filter((x) => inside(x.pattern, path))) {   // a narrower line can hand one file away

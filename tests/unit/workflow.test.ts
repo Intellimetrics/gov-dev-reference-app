@@ -61,6 +61,17 @@ describe('case machine', () => {
     expect(moved.timers).toEqual(assigned.timers);
   });
 
+  it('only assign and reassign change the assignee: documents_received from an applicant does not (R-63)', () => {
+    const { engine } = started();
+    engine.send('C-1', { type: 'triage', by: 'a.nguyen' });
+    engine.send('C-1', { type: 'assign', by: 'a.nguyen', assignee: 'b.ortiz' });
+    engine.send('C-1', { type: 'request_documents', by: 'b.ortiz' });
+    const out = engine.send('C-1', { type: 'documents_received', by: 'applicant', assignee: 'triage-agent' });
+    expect(out.refused).toBeNull();
+    expect(out.case.state).toBe('Assigned');
+    expect(out.case.assignee).toBe('b.ortiz');
+  });
+
   it('a fired SLA escalates and re-arms; the documents timer closes the case (R-62)', () => {
     const { clock, engine } = started();
     clock.set('2026-11-05T09:00:00.000Z');                         // triage_sla was due Wed 11-04 09:00
@@ -86,7 +97,7 @@ describe('case machine', () => {
 describe('parity with the recorded legacy histories', () => {
   it('replays every history with the same state and pending timers after each event', () => {
     const { compared, divergences } = replayAll(histories, rules);
-    expect(compared).toBe(7);
+    expect(compared).toBe(8);
     expect(divergences, JSON.stringify(divergences[0])).toEqual([]);
   });
 
@@ -94,6 +105,18 @@ describe('parity with the recorded legacy histories', () => {
     const d = replay(histories.find((h) => h.caseId === 'H-1001')!, calendarDayRules);
     expect(d).toEqual({ caseId: 'H-1001', at: '2026-11-02T10:00:00.000Z', event: 'triage', field: 'escalations', legacy: 0, next: 1 });
     expect(replayAll(histories, calendarDayRules).divergences.length).toBeGreaterThan(1);
+  });
+});
+
+describe('time base (U-61): the reducer counts in UTC', () => {
+  const local: LegacyHistory[] = JSON.parse(readFileSync(here('legacy-histories-local.json'), 'utf8'));
+  it('Friday 21:00 in New York is already Saturday in UTC', () => {
+    expect(local[0].openedAt).toBe('2026-11-07T02:00:00.000Z');
+    expect(new Date(local[0].openedAt).getUTCDay()).toBe(6);
+  });
+  it('a legacy that counts in local time diverges on an evening submission, and the report says where', () => {
+    // UTC: Saturday + 2 business days = Tue 11-10 02:00Z. Local: Friday 21:00 + 2 = Tue 21:00 EST = Wed 11-11 02:00Z.
+    expect(replay(local[0], rules)).toEqual({ caseId: 'H-1009', at: '2026-11-10T20:00:00.000Z', event: '(as of)', field: 'escalations', legacy: 0, next: 1 });
   });
 });
 

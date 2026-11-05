@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decodeComp3, decodeEbcdic037, decodeRecords, DecodeError, encodeComp3, encodeEbcdic037, type FieldSpec } from '../../src/modernization/batch/decode.ts';
-import { describe as describeFinding, diffFiles, type Contract } from '../../src/modernization/batch/keyed-diff.ts';
+import { describe as describeFinding, diffFiles, parseCsv, type Contract } from '../../src/modernization/batch/keyed-diff.ts';
 import { ConflictingRedelivery, directorySink, renderExport, runExport, type DeliverySink, type ExportRow } from '../../src/modernization/batch/run-ledger.ts';
 
 const fx = (n: string) => readFileSync(join(import.meta.dirname, '../../fixtures/batch', n));
@@ -42,11 +43,46 @@ describe('COMP-3 packed decimal', () => {
     expect(() => decodeComp3(hex('B2 3C'))).toThrow(/high nibble 0xB/);
     expect(() => decodeComp3(hex(''))).toThrow(/empty/);
   });
+  it('holds the field to its declared digit count', () => {
+    expect(() => decodeComp3(hex('12 3C'), 0, 2)).toThrow(/padding nibble is 0x1/); // 123 does not fit two digits
+    expect(decodeComp3(hex('01 2C'), 0, 2)).toBe('12'); // an even count carries a zero padding nibble
+    expect(decodeComp3(hex('12 3C'), 0, 3)).toBe('123');
+    expect(() => decodeComp3(hex('12 3C'), 0, 5)).toThrow(/5 digits need 3 bytes, field has 2/);
+    expect(() => decodeComp3(hex('00 12 3C'), 0, 3)).toThrow(/3 digits need 2 bytes, field has 3/);
+  });
+  it('negative zero: encoded as zero with a C sign, and a D on zero decodes as plain zero', () => {
+    expect(Buffer.from(encodeComp3('-0.00', 7, 2)).toString('hex')).toBe('0000000c');
+    expect(decodeComp3(hex('00 00 00 0D'), 2, 7)).toBe('0.00');
+    expect(decodeComp3(encodeComp3('-0', 3), 0, 3)).toBe('0');
+  });
   it('round-trips through the encoder', () => {
     for (const v of ['0', '7', '-7', '1250.00', '-75.50', '99999.99']) {
       expect(decodeComp3(encodeComp3(v, 7, 2), 2)).toBe(Number(v).toFixed(2));
     }
     expect(() => encodeComp3('123456789', 7, 0)).toThrow(DecodeError);
+  });
+});
+
+describe('the layout file', () => {
+  const layout: FieldSpec[] = JSON.parse(text('referral-feed.layout.json'));
+  it('trims a text field only when the layout says so', () => {
+    const one: FieldSpec[] = [{ name: 'T', type: 'text', length: 6, trim: false }];
+    const padded = encodeEbcdic037('AB    ');
+    expect(decodeRecords(padded, one)).toEqual([{ T: 'AB    ' }]);
+    expect(decodeRecords(padded, [{ ...one[0], trim: true } as FieldSpec])).toEqual([{ T: 'AB' }]);
+    expect(decodeRecords(encodeEbcdic037(' A    '), [{ ...one[0], trim: true } as FieldSpec])).toEqual([{ T: ' A' }]);
+  });
+  it('refuses a layout that does not state trim, repeats a name or has scale beyond digits', () => {
+    expect(() => decodeRecords(new Uint8Array(2), [{ name: 'T', type: 'text', length: 2 } as FieldSpec])).toThrow(/trim must be stated/);
+    expect(() => decodeRecords(new Uint8Array(4), [layout[0], layout[0]])).toThrow(/names field CaseId twice/);
+    expect(() => decodeRecords(new Uint8Array(2), [{ name: 'A', type: 'comp3', digits: 2, scale: 3 }])).toThrow(/scale 3 exceeds 2 digits/);
+  });
+  it('a packed value too wide for its declared digits names the record and field', () => {
+    const wide = Uint8Array.from(fx('referral-feed.ebc'));
+    wide[18] = 0x12; wide[19] = 0x3c; // record 1, HouseholdSize = 123
+    expect(decodeRecords(wide, layout)[0].HouseholdSize).toBe('123'); // fits the declared 3 digits
+    const two = layout.map((f) => (f.name === 'HouseholdSize' ? { ...f, digits: 2 } : f)) as FieldSpec[];
+    expect(() => decodeRecords(wide, two)).toThrow('record 1, field HouseholdSize: 2 digits declared, but the padding nibble is 0x1 and the value does not fit');
   });
 });
 
@@ -109,6 +145,47 @@ describe('keyed record diff: legacy file vs new file', () => {
     const next = text('new-export-20261104.csv') + '10231,ROUTINE,OPEN,2026-11-04T08:15:02.123Z\n';
     expect(diffFiles(legacy, next, contract).map(describeFinding)).toEqual(['new: key 10231 appears twice']);
   });
+  it('a quoted field with a comma, a doubled quote and a line break is one field of one record', () => {
+    const quoted = '1,"ON HOLD, REVIEW",x\n2,"say ""hi""",y\n3,"two\nlines",z\r\n';
+    expect(parseCsv(quoted).records).toEqual([
+      { line: 1, fields: ['1', 'ON HOLD, REVIEW', 'x'] },
+      { line: 2, fields: ['2', 'say "hi"', 'y'] },
+      { line: 3, fields: ['3', 'two\nlines', 'z'] },
+    ]);
+    expect(parseCsv('a,"",c\n"",\n,\n').records.map((r) => r.fields)).toEqual([['a', '', 'c'], ['', ''], ['', '']]);
+    const c: Contract = { key: 'id', columns: ['id', 'status'], ordered: false, tolerances: [] };
+    expect(diffFiles('1,"ON HOLD, REVIEW"\n2,"a\nb"\n', '2,"a\nb"\n1,"ON HOLD, REVIEW"\n', c)).toEqual([]);
+    expect(diffFiles('1,"a\nb"\n', '1,"a\nc"\n', c).map(describeFinding)).toEqual(['1 status: legacy=a\nb new=a\nc']);
+  });
+  it('an unclosed quote is a malformed-file finding, not a record', () => {
+    const c: Contract = { key: 'id', columns: ['id', 'v'], ordered: false, tolerances: [] };
+    expect(diffFiles('1,abc\n', '1,"abc\n', c).map(describeFinding)).toEqual(['new line 1: malformed file, unclosed quote: the file ends inside a quoted field']);
+    expect(diffFiles('1,abc\n2,"def\n', '1,abc\n2,def\n', c).map((f) => f.kind)).toEqual(['malformed']);
+    expect(parseCsv('1,a"b\n').malformed?.detail).toMatch(/quote inside an unquoted field/);
+    expect(parseCsv('1,"a"b\n').malformed?.detail).toMatch(/text after the closing quote/);
+  });
+  it('a row with the wrong field count is one finding, not also missing or extra', () => {
+    const c: Contract = { key: 'id', columns: ['id', 'v'], ordered: false, tolerances: [] };
+    expect(diffFiles('1,a\n2,b\n', '1,a\n2,b,extra\n', c).map(describeFinding)).toEqual(['new line 2: 3 fields, contract has 2']);
+    expect(diffFiles('1,a\n2,b,extra\n', '1,a\n2,b\n', c).map(describeFinding)).toEqual(['legacy line 2: 3 fields, contract has 2']);
+    expect(diffFiles('1,a\n2\n', '1,a\n3,c\n', c).map(describeFinding)).toEqual(['legacy line 2: 1 fields, contract has 2', 'extra in new: 3']);
+  });
+  it('a contract whose key or tolerance column is not a column is refused', () => {
+    expect(() => diffFiles('1,a\n', '1,a\n', { key: 'nope', columns: ['id', 'v'], ordered: false, tolerances: [] })).toThrow(/key nope is not one of its columns/);
+    const t = { column: 'zz', kind: 'numeric' as const, abs: 1, reason: 'x' };
+    expect(() => diffFiles('1,a\n', '1,a\n', { key: 'id', columns: ['id', 'v'], ordered: false, tolerances: [t] })).toThrow(/column zz/);
+  });
+  it('order is checked on the keys both files hold, even when the row counts differ', () => {
+    const c: Contract = { key: 'id', columns: ['id', 'v'], ordered: true, tolerances: [] };
+    const f = diffFiles('1,a\n2,b\n3,c\n', '3,c\n2,b\n', c);
+    expect(f.map(describeFinding)).toEqual(['missing from new: 1', 'row 1: legacy has 2, new has 3']);
+  });
+  it('an impossible date is not an instant: February 30 does not equal March 2', () => {
+    const c: Contract = { key: 'id', columns: ['id', 'at'], ordered: false, tolerances: [{ column: 'at', kind: 'timestamp', withinMs: 1, reason: 'format' }] };
+    expect(diffFiles('1,2026-02-30 08:00:00.0000000\n', '1,2026-03-02T08:00:00.000Z\n', c)).toHaveLength(1);
+    expect(diffFiles('1,2026-11-04 25:00:00.0000000\n', '1,2026-11-05T01:00:00.000Z\n', c)).toHaveLength(1);
+    expect(diffFiles('1,2026-11-04 08:00:00.0000000\n', '1,2026-11-04T08:00:00.000Z\n', c)).toEqual([]);
+  });
   it('numeric and text tolerances compare under their own rules', () => {
     const c: Contract = { key: 'id', columns: ['id', 'amt', 'name'], ordered: false, tolerances: [
       { column: 'amt', kind: 'numeric', abs: 0.005, reason: 'cents rounding' },
@@ -168,6 +245,65 @@ describe('idempotent re-delivery', () => {
     const changed = () => rows().slice(0, 1);
     expect(() => runExport({ businessDate: '2026-11-04', workDir: other.work, rowsFor: changed, sink })).toThrow(ConflictingRedelivery);
   });
+  it('rendering quotes a field that holds a comma, a quote or a line break, and the diff reads it back', () => {
+    const odd: ExportRow[] = [
+      { caseId: 1, caseType: 'ROUTINE', status: 'ON HOLD, REVIEW', submittedAt: '2026-11-04T08:00:00.000Z' },
+      { caseId: 2, caseType: 'ROUTINE', status: 'said "no"', submittedAt: '2026-11-04T09:00:00.000Z' },
+      { caseId: 3, caseType: 'ROUTINE', status: 'a\nb', submittedAt: '2026-11-04T10:00:00.000Z' },
+    ];
+    const file = renderExport(odd).toString('utf8');
+    expect(file).toBe('1,ROUTINE,"ON HOLD, REVIEW",2026-11-04T08:00:00.000Z\n2,ROUTINE,"said ""no""",2026-11-04T09:00:00.000Z\n3,ROUTINE,"a\nb",2026-11-04T10:00:00.000Z\n');
+    expect(diffFiles(file, file, contract)).toEqual([]);
+    expect(parseCsv(file).records.map((r) => r.fields[2])).toEqual(['ON HOLD, REVIEW', 'said "no"', 'a\nb']);
+    expect(contract.quoting?.status).toMatch(/U-53/);
+  });
+  it('the conditional create: a delivery that loses the race at the link step sees unchanged or a conflict', () => {
+    const root = mkdtempSync(join(tmpdir(), 'batch-'));
+    const a = Buffer.from('same\n');
+    // The rival delivers between this call's temp write and its link.
+    const rival = directorySink(join(root, 'out'));
+    const racing = directorySink(join(root, 'out'), { beforeLink: () => { expect(rival.put('f.csv', a)).toBe('created'); } });
+    expect(racing.put('f.csv', a)).toBe('unchanged');
+    expect(readdirSync(join(root, 'out'))).toEqual(['f.csv']); // no temp file left behind
+    const other = directorySink(join(root, 'out2'), { beforeLink: () => { directorySink(join(root, 'out2')).put('f.csv', a); } });
+    expect(() => other.put('f.csv', Buffer.from('different\n'))).toThrow(ConflictingRedelivery);
+    expect(readFileSync(join(root, 'out2', 'f.csv'))).toEqual(a);
+  });
+
+  // Two real OS processes, released together, delivering 25 business dates into one folder.
+  const child = (out: string, work: string, startAt: number, variant: string) =>
+    new Promise<Record<string, string>>((resolve, reject) => {
+      const p = spawn(process.execPath, [join(import.meta.dirname, '../../src/modernization/batch/deliver-once.ts'), out, work, String(startAt), variant, '25'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let o = '', e = '';
+      p.stdout.on('data', (d) => (o += d));
+      p.stderr.on('data', (d) => (e += d));
+      p.on('close', (code) => (code === 0 ? resolve(JSON.parse(o)) : reject(new Error(e))));
+    });
+  const dates = Array.from({ length: 25 }, (_, i) => `2026-12-${String(i + 1).padStart(2, '0')}`);
+
+  it('two processes delivering the same dates at once: one created per date, identical bytes', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'batch-'));
+    const startAt = Date.now() + 1500;
+    const [x, y] = await Promise.all([child(join(root, 'out'), join(root, 'work'), startAt, 'a'), child(join(root, 'out'), join(root, 'work'), startAt, 'a')]);
+    for (const d of dates) {
+      expect([x[d], y[d]].filter((r) => r === 'created'), d).toHaveLength(1);
+      expect(['created', 'unchanged', 'skipped']).toContain(x[d]);
+      expect(['created', 'unchanged', 'skipped']).toContain(y[d]);
+    }
+    const want = renderExport([{ caseId: 10231, caseType: 'ROUTINE', status: 'OPEN', submittedAt: '2026-11-04T08:15:02.123Z' }]);
+    expect(readdirSync(join(root, 'out')).sort()).toEqual(dates.map((d) => `intake-export-${d}.csv`));
+    for (const d of dates) expect(readFileSync(join(root, 'out', `intake-export-${d}.csv`)).equals(want)).toBe(true);
+  }, 30000);
+
+  it('two processes delivering different content for the same dates: one wins, the other is refused, the winner is untouched', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'batch-'));
+    const startAt = Date.now() + 1500;
+    const [x, y] = await Promise.all([child(join(root, 'out'), join(root, 'wa'), startAt, 'a'), child(join(root, 'out'), join(root, 'wb'), startAt, 'b')]);
+    for (const d of dates) {
+      expect([x[d], y[d]].sort(), d).toEqual(['conflict', 'created']);
+      expect(readFileSync(join(root, 'out', `intake-export-${d}.csv`), 'utf8')).toBe(`10231,ROUTINE,${x[d] === 'created' ? 'OPEN' : 'CLOSED'},2026-11-04T08:15:02.123Z\n`);
+    }
+  }, 30000);
   it('a corrupted half-built file is rebuilt, not delivered', () => {
     const s = setup();
     const o = { businessDate: '2026-11-04', workDir: s.work, rowsFor: rows, sink: s.sink };

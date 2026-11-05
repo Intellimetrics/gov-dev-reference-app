@@ -2,7 +2,8 @@
 """Stand-in for exporting the legacy case history and its audit trail. It does NOT import or mirror the TypeScript
 machine: it is written the way a legacy poller would be (a list of rows, weekday() arithmetic, a loop that fires timers).
 Real legacy: export the event table and the timer table instead, one row per event with the state read straight after it.
-Usage: python3 record-standin.py > legacy-histories.json"""
+Usage: python3 record-standin.py > legacy-histories.json
+       python3 record-standin.py --local > legacy-histories-local.json   (same recorder, business days counted in New York local time)"""
 import json, sys
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +12,18 @@ F = "%Y-%m-%dT%H:%M:%S.000Z"
 def parse(s): return datetime.strptime(s, F).replace(tzinfo=timezone.utc)
 def fmt(d): return d.strftime(F)
 
+LOCAL = "--local" in sys.argv   # --local: count business days in America/New_York wall time, as a server-local legacy would (U-61)
+if LOCAL:
+    from zoneinfo import ZoneInfo
+    NY = ZoneInfo("America/New_York")
+
 def plus_bdays(start, n):
+    if LOCAL:
+        d, left = start.astimezone(NY), n
+        while left:
+            d = (d.replace(tzinfo=None) + timedelta(days=1)).replace(tzinfo=NY)   # same wall-clock time next day
+            if d.weekday() < 5 and d.strftime("%Y-%m-%d") not in HOLIDAYS: left -= 1
+        return d.astimezone(timezone.utc)
     d, left = start, n
     while left:
         d += timedelta(days=1)
@@ -45,7 +57,7 @@ class Case:
         if ev["type"] in PERSON_ONLY and not person(ev["by"]): return
         if ev["type"] in ("assign", "reassign") and not person(ev.get("assignee", "")): return
         if ev["type"] == "reassign" and not (ev.get("reason") or "").strip(): return
-        if ev.get("assignee"): self.who = ev["assignee"]
+        if ev["type"] in ("assign", "reassign") and ev.get("assignee"): self.who = ev["assignee"]
         if move != self.state: self.state = move; self.arm(move, parse(ev["at"]))
     def snap(self):
         return {"state": self.state, "assignee": self.who, "escalations": self.esc,
@@ -74,6 +86,12 @@ SCENARIOS = {
     ev("2026-11-02T10:00:00.000Z", "triage"), ev("2026-11-02T11:00:00.000Z", "assign", assignee="b.ortiz"),
     ev("2026-11-24T09:00:00.000Z", "decide", by="b.ortiz")]),
 }
+SCENARIOS["H-1008"] = ("2026-11-02T09:00:00.000Z", "2026-11-13T09:00:00.000Z", [
+    ev("2026-11-02T10:00:00.000Z", "triage"), ev("2026-11-02T11:00:00.000Z", "assign", assignee="b.ortiz"),
+    ev("2026-11-03T09:00:00.000Z", "request_documents", by="b.ortiz"),
+    ev("2026-11-04T09:00:00.000Z", "documents_received", by="applicant", assignee="triage-agent")])
+if LOCAL:   # Friday 2026-11-06 21:00 in New York (EST, UTC-5) is Saturday 02:00 UTC
+    SCENARIOS = {"H-1009": ("2026-11-07T02:00:00.000Z", "2026-11-10T20:00:00.000Z", [])}
 out = []
 for cid, (opened, as_of, events) in SCENARIOS.items():
     c = Case(parse(opened)); rows = []

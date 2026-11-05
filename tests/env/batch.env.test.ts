@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import sql from 'mssql';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { diffFiles, type Contract } from '../../src/modernization/batch/keyed-diff.ts';
+import { describe as describeFinding, diffFiles, type Contract } from '../../src/modernization/batch/keyed-diff.ts';
 import { renderExport, type ExportRow } from '../../src/modernization/batch/run-ledger.ts';
 
 const run = process.env.M14_ENV === '1' ? describe : describe.skip;
@@ -30,7 +30,8 @@ run('Intake_Nightly_Export: old query vs new job against a real SQL Server', () 
       INSERT dbo.Intake VALUES
         (10231,'ROUTINE','OPEN','2026-11-04T08:15:02.1234567'), (10232,'EMERGENCY','OPEN','2026-11-04T08:41:55.0070000'),
         (10233,'ROUTINE','CLOSED','2026-11-04T09:02:10.9999999'), (10234,'EMERGENCY','OPEN','2026-11-04T23:59:59.9990000'),
-        (10240,'ROUTINE','OPEN','2026-11-05T00:00:00.0000000')`);
+        (10240,'ROUTINE','OPEN','2026-11-05T00:00:00.0000000'),
+        (10250,'ROUTINE','ON HOLD, REVIEW','2026-11-06T09:00:00.0000000')`);
   });
   afterAll(async () => { await pool?.close(); });
 
@@ -49,5 +50,12 @@ run('Intake_Nightly_Export: old query vs new job against a real SQL Server', () 
   });
   it('the day boundary is part of parity: 2026-11-05 holds only the midnight row', async () => {
     expect((await newFile('2026-11-05')).trim().split('\n')).toEqual(['10240,ROUTINE,OPEN,2026-11-05T00:00:00.000Z']);
+  });
+  it('a status with a comma: a query that joins with CONCAT does not quote it, so it fails the contract by shape (U-53)', async () => {
+    // The old query's shape writes ON HOLD, REVIEW as two fields. Whether the real legacy job does
+    // the same is U-53; the new job quotes (D-50), and the diff says which side broke the positions.
+    const [legacy, next] = [await legacyFile('2026-11-06'), await newFile('2026-11-06')];
+    expect(next).toBe('10250,ROUTINE,"ON HOLD, REVIEW",2026-11-06T09:00:00.000Z\n');
+    expect(diffFiles(legacy, next, contract).map(describeFinding)).toEqual(['legacy line 1: 5 fields, contract has 4']);
   });
 });

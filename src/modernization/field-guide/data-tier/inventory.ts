@@ -138,11 +138,9 @@ export function buildInventory(s: Snapshots): Inventory {
   };
 }
 
-/** Every row read is cited by a dependent, skipped with a reason, or named in an unknown. */
+/** Every row read is cited by a dependent, skipped with a reason, or named in an unknown. Counted by row, once: a row in two sets must not hide a row in none. */
 export function accounted(inv: Inventory): number {
-  const cited = new Set(inv.dependents.flatMap((d) => d.evidence));
-  const unk = new Set(inv.unknowns.flatMap((u) => u.evidence));
-  return cited.size + unk.size + inv.skipped.length;
+  return new Set([...inv.dependents.flatMap((d) => d.evidence), ...inv.unknowns.flatMap((u) => u.evidence), ...inv.skipped.map((k) => k.cite)]).size;
 }
 
 export function renderDependents(inv: Inventory): string {
