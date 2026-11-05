@@ -9,8 +9,9 @@ import type { Platform, SecretCredential } from '../types.ts';
 
 export const LOCAL_SECRET_DIR = process.env.M14_SECRET_DIR ?? join(homedir(), '.config', 'm14-reference');
 
+// One file per secret, holding exactly the value (as a platform secret store would).
 async function readSecret(name: string): Promise<string> {
-  return readFile(join(LOCAL_SECRET_DIR, `${name}.json`), 'utf8');
+  return readFile(join(LOCAL_SECRET_DIR, name), 'utf8');
 }
 
 export const localPlatform: Platform = {
@@ -26,7 +27,7 @@ export const localPlatform: Platform = {
     target: { server: 'localhost', port: Number(process.env.M14_SQL_PORT ?? 14330), database: 'intake', trustServerCertificate: true },
     auth: {
       kind: 'secret',
-      get: async () => JSON.parse(await readSecret('db-app')) as SecretCredential,
+      get: async () => JSON.parse(await readSecret('db-app')) as SecretCredential, // this secret's value is JSON
       rotationOwner: 'you (local development)',
       maxAgeDays: 30,
       delivery: 'runtime',

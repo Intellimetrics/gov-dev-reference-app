@@ -10,8 +10,10 @@ export interface PendingLogin { verifier: string; state: string; nonce: string }
 export interface SignedInUser { sub: string; issuer: string; name: string; roles: string[] }
 
 export async function clientFor(identity: Identity, clientSecret: string, opts: { allowHttp?: boolean } = {}) {
-  return oidc.discovery(new URL(identity.issuer), identity.clientId, clientSecret, undefined,
-    opts.allowHttp ? { execute: [oidc.allowInsecureRequests] } : undefined); // allowHttp: local issuer only
+  // enableNonRepudiationChecks: verify the ID token's signature against the provider's
+  // published keys, not only trust the TLS connection it arrived on. allowHttp: local issuer only.
+  const execute = [oidc.enableNonRepudiationChecks, ...(opts.allowHttp ? [oidc.allowInsecureRequests] : [])];
+  return oidc.discovery(new URL(identity.issuer), identity.clientId, clientSecret, undefined, { execute });
 }
 
 export async function startLogin(config: oidc.Configuration, identity: Identity, redirectUri: string) {
@@ -28,7 +30,7 @@ export async function startLogin(config: oidc.Configuration, identity: Identity,
   return { url, pending };
 }
 
-/** Redeems the code. The library checks state, PKCE, nonce, issuer, audience and the ID token signature. */
+/** Redeems the code. The library checks state, PKCE, nonce, issuer, audience, expiry and (see clientFor) the ID token signature. */
 export async function finishLogin(config: oidc.Configuration, identity: Identity, callbackUrl: URL, pending: PendingLogin): Promise<SignedInUser> {
   const tokens = await oidc.authorizationCodeGrant(config, callbackUrl, {
     pkceCodeVerifier: pending.verifier,

@@ -23,6 +23,6 @@ docker run -d --name m14-oidc -p 127.0.0.1:8080:8080 -e JSON_CONFIG="$(cat "$(di
 # Local OpenTelemetry collector (lesson 16): prints what the app sends; see `docker logs m14-otel`.
 docker run -d --name m14-otel -p 127.0.0.1:4318:4318 -v "$(cd "$(dirname "$0")" && pwd)/otel-collector.yaml:/etc/otelcol/config.yaml:ro" \
   otel/opentelemetry-collector:0.140.0 >/dev/null
-printf '{"clientSecret":"%s"}' "$(gen)" > "$DIR/oidc-client.json"   # the mock accepts any secret; a real IdP issues it
-printf '{"user":"app_user","password":"%s","rotatedAt":"%s"}' "$APP" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$DIR/db-app.json"
-echo "local database ready on 127.0.0.1:$PORT; credential in $DIR/db-app.json (outside the repo)"
+printf '%s' "$(gen)" > "$DIR/oidc-client"   # the mock accepts any secret; a real IdP issues it
+printf '{"user":"app_user","password":"%s","rotatedAt":"%s"}' "$APP" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$DIR/db-app"
+echo "local database ready on 127.0.0.1:$PORT; credential in $DIR/db-app (outside the repo)"

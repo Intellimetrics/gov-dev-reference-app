@@ -46,11 +46,23 @@ export function createConnectionProvider(target: DbTarget, auth: DbAuth, connect
   const open = () => {
     const p = configFor(target, auth).then(connect);
     pool = p.catch((err: unknown) => {
-      pool = undefined; // a failed connect is never cached
+      if (pool === guarded) pool = undefined; // a failed connect is never cached
       throw err;
     });
+    const guarded = pool;
     return pool;
   };
+
+  /**
+   * Replace the pool a caller saw fail, once. Concurrent callers that saw the same
+   * failed pool share one refresh; a caller that saw an older pool reuses the new one.
+   */
+  async function refresh(failed: Promise<sql.ConnectionPool>) {
+    if (pool !== failed) return pool ?? open();
+    pool = undefined;
+    failed.then((p) => p.close(), () => undefined); // close in the background
+    return open();
+  }
 
   async function reset() {
     const old = pool;
@@ -58,16 +70,20 @@ export function createConnectionProvider(target: DbTarget, auth: DbAuth, connect
     if (old) await old.then((p) => p.close(), () => undefined);
   }
 
-  /** Run a query function; on a login failure, refresh the credential once and retry. */
+  /**
+   * Run a query function; on a login failure, refresh the credential once and retry.
+   * ELOGIN also covers a locked account or a wrong user, so a second ELOGIN after the
+   * refresh is not "rotation lag": it raises CredentialRefreshFailed for the owner.
+   */
   async function withPool<T>(fn: (pool: sql.ConnectionPool) => Promise<T>): Promise<T> {
+    const seen = pool ?? open();
     try {
-      return await fn(await (pool ?? open()));
+      return await fn(await seen);
     } catch (err) {
       if (!isLoginFailure(err) || auth.kind !== 'secret') throw err;
       if (auth.delivery === 'startup') throw new CredentialRefreshFailed('startup');
-      await reset();
       try {
-        return await fn(await open());
+        return await fn(await refresh(seen));
       } catch (again) {
         if (isLoginFailure(again)) throw new CredentialRefreshFailed('runtime');
         throw again;

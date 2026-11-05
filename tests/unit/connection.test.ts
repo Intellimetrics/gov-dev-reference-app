@@ -90,3 +90,26 @@ describe('rotation age', () => {
     if (!v.ok) expect(v.reason).toBe(reason);
   });
 });
+
+describe('connection provider: concurrent rotation', () => {
+  it('ten requests failing at once share one refresh, one new pool, and all succeed', async () => {
+    const server = { password: 'old' };
+    const auth = secretAuth(['old', 'new']);
+    const pools: Array<{ close: ReturnType<typeof vi.fn> }> = [];
+    const connect = vi.fn(async (config: sql.config) => {
+      const pw = config.password;
+      const p = { close: vi.fn(async () => {}), query: async () => { if (pw !== server.password) throw loginFailed(); return 'ok'; } };
+      pools.push(p);
+      return p as unknown as sql.ConnectionPool;
+    });
+    const db = createConnectionProvider(target, auth, connect);
+    expect(await db.withPool(run)).toBe('ok');
+    server.password = 'new';
+    const results = await Promise.all(Array.from({ length: 10 }, () => db.withPool(run)));
+    expect(results).toEqual(Array(10).fill('ok'));
+    expect(auth.get).toHaveBeenCalledTimes(2);   // one refresh, not ten
+    expect(connect).toHaveBeenCalledTimes(2);    // one new pool, no leaks
+    expect(pools[0].close).toHaveBeenCalledTimes(1);
+    expect(pools[1].close).not.toHaveBeenCalled();
+  });
+});

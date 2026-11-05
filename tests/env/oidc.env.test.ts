@@ -8,7 +8,7 @@ const redirectUri = 'http://localhost:3000/auth/callback';
 
 async function signIn(tamper?: (u: URL) => void) {
   const { identity, secrets } = localPlatform;
-  const { clientSecret } = JSON.parse(await secrets.get(identity.clientSecretName));
+  const clientSecret = await secrets.get(identity.clientSecretName);
   const config = await clientFor(identity, clientSecret, { allowHttp: true });
   const { url, pending } = await startLogin(config, identity, redirectUri);
   const res = await fetch(url, { redirect: 'manual' });            // the mock signs in without a page

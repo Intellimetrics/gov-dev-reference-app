@@ -9,7 +9,7 @@ import { localPlatform, LOCAL_SECRET_DIR } from '../../src/platform/local/index.
 import { checkRotation } from '../../src/platform/rotation.ts';
 
 const run = process.env.M14_ENV === '1' ? describe : describe.skip;
-const secret = () => JSON.parse(readFileSync(join(LOCAL_SECRET_DIR, 'db-app.json'), 'utf8'));
+const secret = () => JSON.parse(readFileSync(join(LOCAL_SECRET_DIR, 'db-app'), 'utf8'));
 const asSa = (q: string) => execFileSync('docker', ['exec', 'm14-sql', '/opt/mssql-tools18/bin/sqlcmd', '-C', '-b', '-S', 'localhost', '-U', 'sa',
   '-P', readFileSync(join(LOCAL_SECRET_DIR, 'sa.txt'), 'utf8'), '-Q', q], { encoding: 'utf8' });
 const who = (p: sql.ConnectionPool) => p.request().query('SELECT SUSER_SNAME() AS u').then((r) => r.recordset[0].u as string);
