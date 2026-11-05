@@ -1,0 +1,52 @@
+{
+  "_comment": "Capstone (lesson 38) variant registry. A referee file: what a variant may declare, and what each choice ADDS. The baseline always runs in full; nothing here removes a baseline check.",
+  "baseline": {
+    "local": ["typecheck", "unit", "contract", "differential", "property-replay", "mutation", "referee", "rulings", "traceability", "evidence-hashes", "db-contract-rules"],
+    "deployment": ["live-endpoint", "db-intact", "db-contract", "parity-live", "db-env-tests", "triage-grants"]
+  },
+  "fields": {
+    "cloud": {
+      "local": { "local": [], "deployment": [] },
+      "azure": { "local": ["platform-typecheck:azure"], "deployment": ["signin:azure", "db-grant:azure", "secret-read:azure", "telemetry:azure", "deploy:azure"] },
+      "aws": { "local": ["platform-typecheck:aws", "aws-secrets-localstack", "collector-validate:aws", "names-lint:export-control"], "deployment": ["signin:aws", "secret-read:aws", "rotation-reaches-task:aws", "telemetry:aws", "deploy:aws"] },
+      "google": { "local": ["platform-typecheck:google", "collector-validate:google"], "deployment": ["signin:google", "secret-read:google", "rotation-job:google", "telemetry:google", "deploy:google"] }
+    },
+    "boundaryProfile": {
+      "none": { "local": [], "deployment": [] },
+      "fedramp-moderate": { "local": [], "deployment": ["boundary-services-list"] },
+      "fedramp-high": { "local": [], "deployment": ["boundary-services-list"] },
+      "il4": { "local": [], "deployment": ["boundary-services-list", "il4-telemetry-backend"] },
+      "il5": { "local": [], "deployment": ["boundary-services-list", "il5-telemetry-backend"] }
+    },
+    "codeHostEdition": {
+      "github-cloud": { "local": ["pipeline-yaml:github"], "deployment": ["branch-protection:github", "oidc-federation:github"] },
+      "github-enterprise-server": { "local": ["pipeline-yaml:github"], "deployment": ["branch-protection:github", "oidc-federation:ghes"] },
+      "gitlab-saas": { "local": ["pipeline-yaml:gitlab"], "deployment": ["code-owner-approval:gitlab", "oidc-federation:gitlab"] },
+      "gitlab-self-managed": { "local": ["pipeline-yaml:gitlab"], "deployment": ["code-owner-approval:gitlab", "oidc-issuer-reachable:gitlab"] },
+      "gitlab-dedicated-government": { "local": ["pipeline-yaml:gitlab"], "deployment": ["code-owner-approval:gitlab", "oidc-federation:gitlab"] },
+      "azure-devops-services": { "local": ["pipeline-yaml:azure-devops"], "deployment": ["required-reviewer-policies:azure-devops", "oidc-federation:azure-devops"] },
+      "azure-devops-server": { "local": ["pipeline-yaml:azure-devops"], "deployment": ["required-reviewer-policies:azure-devops", "federation:azure-devops-server"] },
+      "bitbucket-cloud": { "local": ["pipeline-yaml:bitbucket", "referee-approval-check:bitbucket"], "deployment": ["compensating-approval-audit:bitbucket", "oidc-federation:bitbucket"] }
+    },
+    "legacyStack": {
+      "classic-asp-sqlserver": { "local": [], "deployment": [] },
+      "oracle-plsql": { "local": ["inventory:data-tier"], "deployment": ["data-pump-baseline", "cutback-rehearsal"] },
+      "db2-cobol": { "local": ["inventory:data-tier", "copybook-map"], "deployment": ["batch-dataset-capture"] },
+      "java-ee": { "local": ["inventory:app-tier"], "deployment": ["http-capture"] },
+      "dotnet-framework": { "local": ["inventory:app-tier"], "deployment": ["http-capture"] },
+      "access": { "local": ["inventory:app-tier"], "deployment": ["access-query-outputs"] }
+    },
+    "appType": {
+      "intake": { "local": [], "deployment": [] },
+      "batch": { "local": ["batch-keyed-diff", "batch-rerun-idempotent"], "deployment": ["batch-run-window"] },
+      "workflow": { "local": ["workflow-replay", "workflow-invariants"], "deployment": ["workflow-engine-timers"] },
+      "portal": { "local": ["portal-pii-allowlist", "portal-canary-router", "portal-acr-values"], "deployment": ["portal-a11y-audit", "portal-signin:login-gov"] },
+      "reports": { "local": ["reports-dataset-equivalence"], "deployment": ["reports-rendered-review"] }
+    }
+  },
+  "incompatible": [
+    { "when": { "cloud": "local" }, "forbid": { "boundaryProfile": ["fedramp-moderate", "fedramp-high", "il4", "il5"] }, "why": "a laptop has no authorization boundary" },
+    { "when": { "cloud": "azure" }, "forbid": { "boundaryProfile": ["il5"] }, "why": "not covered by lesson 34's facts" },
+    { "when": { "cloud": "google" }, "forbid": { "boundaryProfile": ["il5", "fedramp-moderate"] }, "why": "lesson 36 covers FedRAMP High and IL4 only" }
+  ]
+}
