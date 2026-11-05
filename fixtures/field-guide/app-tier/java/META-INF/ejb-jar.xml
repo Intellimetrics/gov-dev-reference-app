@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ejb-jar version="3.2">
+  <!-- Case-office reporting beans. Owner not recorded. -->
+  <enterprise-beans>
+    <session>
+      <ejb-name>IntakeStatusBean</ejb-name>
+      <ejb-class>gov.agency.intake.IntakeStatusBean</ejb-class>
+      <session-type>Stateless</session-type>
+      <resource-ref>
+        <res-ref-name>jdbc/IntakeDS</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+      </resource-ref>
+    </session>
+    <session>
+      <ejb-name>NightlyDigestBean</ejb-name>
+      <ejb-class>gov.agency.intake.NightlyDigestBean</ejb-class>
+      <session-type>Singleton</session-type>
+      <timer>
+        <schedule><hour>2</hour><minute>30</minute></schedule>
+        <timeout-method><method-name>buildDigest</method-name></timeout-method>
+      </timer>
+    </session>
+    <message-driven>
+      <ejb-name>IntakeEventListener</ejb-name>
+      <ejb-class>gov.agency.intake.IntakeEventListener</ejb-class>
+      <messaging-type>javax.jms.MessageListener</messaging-type>
+      <activation-config>
+        <activation-config-property>
+          <activation-config-property-name>destinationLookup</activation-config-property-name>
+          <activation-config-property-value>jms/IntakeEvents</activation-config-property-value>
+        </activation-config-property>
+      </activation-config>
+    </message-driven>
+  </enterprise-beans>
+</ejb-jar>

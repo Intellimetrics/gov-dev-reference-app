@@ -25,6 +25,7 @@ if (!host) { console.error(`REPO_HOST must be one of: ${Object.keys(HOSTS).join(
 const MUST_PROTECT = ['tests/differential/', 'tests/parity/', 'modernization/rules.md', 'modernization/unknowns.md',
   'modernization/golden/', 'modernization/scripts/', 'modernization/parity/rulings/',
   'modernization/parity/equivalent-mutants.txt', 'modernization/referee-paths.txt', 'modernization/owner-teams.txt',
+  'modernization/variant.json', 'modernization/supported-variants.json', 'scripts/capstone/',
   'scripts/parity/', 'scripts/verify-cold.sh', 'stryker.config.json', 'vitest.config.ts', 'package.json',
   'evidence/parity-report.json', 'evidence/evidence-manifest.json', '.claude/', ...host.owners.slice(0, 1), ...host.pipeline];
                                                          // a shrunken referee-paths.txt fails here

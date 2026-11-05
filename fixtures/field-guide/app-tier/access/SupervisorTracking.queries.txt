@@ -1,0 +1,23 @@
+-- Saved queries exported from SupervisorTracking.accdb on SUP-WS-014. One header line per object.
+-- query: qryOpenCases | type=select
+SELECT dbo_Intake.CaseId, dbo_Intake.CaseType, dbo_Intake.Status, dbo_Intake.DaysWaiting
+FROM dbo_Intake
+WHERE (((dbo_Intake.Status)<>"CLOSED"));
+-- query: qryOverThirty | type=select
+SELECT qryOpenCases.CaseId, qryOpenCases.DaysWaiting FROM qryOpenCases WHERE qryOpenCases.DaysWaiting > 30;
+-- query: qryMonthlyAudit | type=select
+SELECT i.CaseId, i.SubmittedAt, a.Actor, a.At
+FROM dbo_Intake AS i INNER JOIN dbo_IntakeAudit AS a ON i.CaseId = a.CaseId
+WHERE i.SubmittedAt >= [Start date];
+-- query: qryEverything | type=select
+SELECT * FROM dbo_Intake;
+-- query: qryBands | type=select
+SELECT CaseId, fnPriorityBand(DaysWaiting) AS Band FROM dbo_Intake;
+-- query: qryHouseholdSplit | type=crosstab
+TRANSFORM Count(CaseId) AS N SELECT CaseType FROM dbo_Intake GROUP BY CaseType PIVOT HouseholdSize;
+-- query: qryAboveAverage | type=select
+SELECT CaseId FROM dbo_Intake WHERE DaysWaiting > (SELECT Avg(DaysWaiting) FROM dbo_Intake);
+-- query: qryServerSummary | type=passthrough
+EXEC dbo.usp_IntakeSummary
+-- macro: AutoExec
+OpenForm frmReview

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.2">
+  <persistence-unit name="intakePU" transaction-type="JTA">
+    <jta-data-source>java:/jdbc/IntakeDS</jta-data-source>
+    <class>gov.agency.intake.IntakeEntity</class>
+    <properties>
+      <property name="hibernate.hbm2ddl.auto" value="none"/>
+    </properties>
+  </persistence-unit>
+</persistence>

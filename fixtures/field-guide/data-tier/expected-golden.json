@@ -1,0 +1,35 @@
+[
+  {
+    "IR-CASE-ID": "00004211",
+    "IR-CASE-TYPE": "ROUTINE   ",
+    "IR-STATUS": "O",
+    "IR-SUBMITTED": "20261101",
+    "IR-HOUSEHOLD": "04",
+    "IR-DAYS-WAITING": "011",
+    "IR-SCORE": "0000800C",
+    "IR-DISCOUNT": "00000C",
+    "IR-FILLER": "     "
+  },
+  {
+    "IR-CASE-ID": "00004212",
+    "IR-CASE-TYPE": "EMERGENCY ",
+    "IR-STATUS": "N",
+    "IR-SUBMITTED": "20261101",
+    "IR-HOUSEHOLD": "12",
+    "IR-DAYS-WAITING": "053",
+    "IR-SCORE": "0001250C",
+    "IR-DISCOUNT": "00500D",
+    "IR-FILLER": "     "
+  },
+  {
+    "IR-CASE-ID": "00004213",
+    "IR-CASE-TYPE": "emergency ",
+    "IR-STATUS": "N",
+    "IR-SUBMITTED": "20261102",
+    "IR-HOUSEHOLD": "01",
+    "IR-DAYS-WAITING": "000",
+    "IR-SCORE": "0000700C",
+    "IR-DISCOUNT": "00000F",
+    "IR-FILLER": "     "
+  }
+]

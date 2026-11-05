@@ -1,0 +1,4 @@
+# Linked tables exported from SupervisorTracking.accdb (SUP-WS-014)
+dbo_Intake -> ODBC;DRIVER={SQL Server};SERVER=SQL-LEG-01;DATABASE=IntakeDb;Trusted_Connection=Yes;TABLE=dbo.Intake
+dbo_IntakeAudit -> ODBC;DRIVER={SQL Server};SERVER=SQL-LEG-01;DATABASE=IntakeDb;Trusted_Connection=Yes;TABLE=dbo.IntakeAudit
+dbo_Referral -> ODBC;DRIVER={SQL Server};SERVER=SQL-LEG-01;DATABASE=IntakeDb;UID=svc_sup;PWD=EXAMPLE-NOT-A-REAL-PASSWORD;TABLE=dbo.Referral

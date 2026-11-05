@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 const SCRIPT = join(__dirname, '../../scripts/parity/check-referee.mjs');
 const COMMON = ['tests/differential/', 'tests/parity/', 'modernization/rules.md', 'modernization/unknowns.md', 'modernization/golden/',
   'modernization/scripts/', 'modernization/parity/rulings/', 'modernization/parity/equivalent-mutants.txt', 'modernization/referee-paths.txt',
-  'modernization/owner-teams.txt', 'scripts/parity/', 'scripts/verify-cold.sh', 'stryker.config.json', 'vitest.config.ts', 'package.json',
+  'modernization/owner-teams.txt', 'modernization/variant.json', 'modernization/supported-variants.json', 'scripts/capstone/', 'scripts/parity/', 'scripts/verify-cold.sh', 'stryker.config.json', 'vitest.config.ts', 'package.json',
   'evidence/parity-report.json', 'evidence/evidence-manifest.json', '.claude/'];
 const HOST_PATHS: Record<string, string[]> = {
   github: ['.github/CODEOWNERS', '.github/workflows/'], gitlab: ['CODEOWNERS', '.gitlab-ci.yml'],

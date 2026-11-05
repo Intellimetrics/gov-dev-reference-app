@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
+  <DataSources>
+    <DataSource Name="IntakeDb">
+      <ConnectionProperties>
+        <DataProvider>SQL</DataProvider>
+        <ConnectString>Data Source=LEGACY-SQL01;Initial Catalog=intake</ConnectString>
+      </ConnectionProperties>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="DailyIntake">
+      <Query>
+        <DataSourceName>IntakeDb</DataSourceName>
+        <QueryParameters>
+          <QueryParameter Name="@ReportDate"><Value>=Parameters!ReportDate.Value</Value></QueryParameter>
+        </QueryParameters>
+        <CommandText>SELECT * FROM dbo.rpt_DailyIntake
+WHERE CAST(SubmittedAt AS date) = @ReportDate</CommandText>
+      </Query>
+      <Fields>
+        <Field Name="CaseId"><DataField>CaseId</DataField></Field>
+        <Field Name="CaseType"><DataField>CaseType</DataField></Field>
+      </Fields>
+    </DataSet>
+    <DataSet Name="CaseTypeTotals">
+      <Query>
+        <DataSourceName>IntakeDb</DataSourceName>
+        <CommandType>StoredProcedure</CommandType>
+        <CommandText>dbo.usp_CaseTypeTotals</CommandText>
+        <QueryParameters>
+          <QueryParameter Name="@ReportDate"><Value>=Parameters!ReportDate.Value</Value></QueryParameter>
+        </QueryParameters>
+      </Query>
+    </DataSet>
+    <DataSet Name="WaitingOver30">
+      <Query>
+        <DataSourceName>IntakeDb</DataSourceName>
+        <CommandText><![CDATA[SELECT i.CaseId, i.DaysWaiting FROM dbo.Intake AS i
+JOIN dbo.IntakeAudit AS a ON a.CaseId = i.CaseId WHERE i.DaysWaiting > 30 AND a.Action <> 'Closed']]></CommandText>
+      </Query>
+    </DataSet>
+    <!-- <DataSet Name="Retired"><Query><CommandText>SELECT * FROM dbo.Intake</CommandText></Query></DataSet> -->
+  </DataSets>
+  <ReportParameters>
+    <ReportParameter Name="ReportDate"><DataType>DateTime</DataType></ReportParameter>
+  </ReportParameters>
+  <ReportSections>
+    <ReportSection>
+      <Body>
+        <ReportItems>
+          <Subreport Name="SupervisorSummary"><ReportName>SupervisorSummary</ReportName></Subreport>
+        </ReportItems>
+      </Body>
+    </ReportSection>
+  </ReportSections>
+  <Code>Public Function Band(ByVal d As Integer) As String
+  Return IIf(d &gt; 30, "late", "ok")
+End Function</Code>
+</Report>

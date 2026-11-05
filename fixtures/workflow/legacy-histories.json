@@ -1,0 +1,434 @@
+[
+ {
+  "caseId": "H-1001",
+  "openedAt": "2026-10-30T15:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-02T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T14:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T14:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-06T16:00:00.000Z",
+    "type": "decide",
+    "by": "b.ortiz",
+    "after": {
+     "state": "Decided",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "auto_close",
+       "dueAt": "2026-11-12T16:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-09T09:00:00.000Z",
+    "type": "close",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Closed",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": []
+    }
+   }
+  ],
+  "asOf": "2026-11-12T09:00:00.000Z",
+  "final": {
+   "state": "Closed",
+   "assignee": "b.ortiz",
+   "escalations": 0,
+   "timers": []
+  }
+ },
+ {
+  "caseId": "H-1002",
+  "openedAt": "2026-11-04T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-09T08:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 1,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-10T08:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-11-12T09:00:00.000Z",
+  "final": {
+   "state": "Triaged",
+   "assignee": null,
+   "escalations": 2,
+   "timers": [
+    {
+     "kind": "assign_sla",
+     "dueAt": "2026-11-13T08:00:00.000Z"
+    }
+   ]
+  }
+ },
+ {
+  "caseId": "H-1003",
+  "openedAt": "2026-11-09T12:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-09T13:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-10T13:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-10T09:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-18T09:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-11-17T12:00:00.000Z",
+  "final": {
+   "state": "Assigned",
+   "assignee": "b.ortiz",
+   "escalations": 0,
+   "timers": [
+    {
+     "kind": "work_sla",
+     "dueAt": "2026-11-18T09:00:00.000Z"
+    }
+   ]
+  }
+ },
+ {
+  "caseId": "H-1004",
+  "openedAt": "2026-11-02T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-02T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T11:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T11:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-12T09:00:00.000Z",
+    "type": "request_documents",
+    "by": "b.ortiz",
+    "after": {
+     "state": "AwaitingDocuments",
+     "assignee": "b.ortiz",
+     "escalations": 1,
+     "timers": [
+      {
+       "kind": "docs_due",
+       "dueAt": "2026-11-27T09:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-12-01T09:00:00.000Z",
+  "final": {
+   "state": "Closed",
+   "assignee": "b.ortiz",
+   "escalations": 1,
+   "timers": []
+  }
+ },
+ {
+  "caseId": "H-1005",
+  "openedAt": "2026-11-02T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-02T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T11:00:00.000Z",
+    "type": "assign",
+    "by": "triage-agent",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T12:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T12:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-04T09:00:00.000Z",
+    "type": "reassign",
+    "by": "a.nguyen",
+    "assignee": "c.diaz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T12:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-05T09:00:00.000Z",
+    "type": "reassign",
+    "by": "a.nguyen",
+    "assignee": "c.diaz",
+    "reason": "b.ortiz is on leave",
+    "after": {
+     "state": "Assigned",
+     "assignee": "c.diaz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T12:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-11-13T09:00:00.000Z",
+  "final": {
+   "state": "Assigned",
+   "assignee": "c.diaz",
+   "escalations": 2,
+   "timers": [
+    {
+     "kind": "work_sla",
+     "dueAt": "2026-11-16T12:00:00.000Z"
+    }
+   ]
+  }
+ },
+ {
+  "caseId": "H-1006",
+  "openedAt": "2026-11-02T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-03T09:00:00.000Z",
+    "type": "withdraw",
+    "by": "applicant",
+    "after": {
+     "state": "Closed",
+     "assignee": null,
+     "escalations": 0,
+     "timers": []
+    }
+   },
+   {
+    "at": "2026-11-03T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Closed",
+     "assignee": null,
+     "escalations": 0,
+     "timers": []
+    }
+   },
+   {
+    "at": "2026-11-03T11:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Closed",
+     "assignee": null,
+     "escalations": 0,
+     "timers": []
+    }
+   }
+  ],
+  "asOf": "2026-11-09T09:00:00.000Z",
+  "final": {
+   "state": "Closed",
+   "assignee": null,
+   "escalations": 0,
+   "timers": []
+  }
+ },
+ {
+  "caseId": "H-1007",
+  "openedAt": "2026-11-02T09:00:00.000Z",
+  "events": [
+   {
+    "at": "2026-11-02T10:00:00.000Z",
+    "type": "triage",
+    "by": "a.nguyen",
+    "after": {
+     "state": "Triaged",
+     "assignee": null,
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "assign_sla",
+       "dueAt": "2026-11-03T10:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-02T11:00:00.000Z",
+    "type": "assign",
+    "by": "a.nguyen",
+    "assignee": "b.ortiz",
+    "after": {
+     "state": "Assigned",
+     "assignee": "b.ortiz",
+     "escalations": 0,
+     "timers": [
+      {
+       "kind": "work_sla",
+       "dueAt": "2026-11-09T11:00:00.000Z"
+      }
+     ]
+    }
+   },
+   {
+    "at": "2026-11-24T09:00:00.000Z",
+    "type": "decide",
+    "by": "b.ortiz",
+    "after": {
+     "state": "Decided",
+     "assignee": "b.ortiz",
+     "escalations": 5,
+     "timers": [
+      {
+       "kind": "auto_close",
+       "dueAt": "2026-11-30T09:00:00.000Z"
+      }
+     ]
+    }
+   }
+  ],
+  "asOf": "2026-11-30T09:00:00.000Z",
+  "final": {
+   "state": "Closed",
+   "assignee": "b.ortiz",
+   "escalations": 5,
+   "timers": []
+  }
+ }
+]

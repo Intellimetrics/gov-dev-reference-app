@@ -1,0 +1,8 @@
+{
+  "key": "CaseId",
+  "columns": ["CaseId", "CaseType", "Status", "SubmittedAt"],
+  "ordered": false,
+  "tolerances": [
+    { "column": "SubmittedAt", "kind": "timestamp", "withinMs": 1, "reason": "the legacy job writes datetime2 text with seven fractional digits, the new job writes ISO-8601 UTC to the millisecond; the same instant to the millisecond is equal" }
+  ]
+}

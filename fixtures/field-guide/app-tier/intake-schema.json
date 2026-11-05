@@ -1,0 +1,4 @@
+{
+  "dbo.Intake": ["CaseId", "CaseType", "Status", "SubmittedAt", "HouseholdSize", "DaysWaiting"],
+  "dbo.IntakeAudit": ["CaseId", "Action", "Actor", "At"]
+}

@@ -1,0 +1,5 @@
+- U-30: INTAKE.PKG_EXPORT calls UTL_FILE, which writes or reads files outside the database. Evidence: oracle-all-dependencies.csv:10. Who can say: the package owner.
+- U-31: INTAKE.PKG_REPORTS calls DBMS_SQL, which builds SQL at run time, so the tables it touches are not in the catalog. Evidence: oracle-all-dependencies.csv:13. Who can say: the package owner.
+- U-32: INTAKE.PKG_REPORTS reaches INTAKE.INTAKE across database link HQ_LINK; the remote object is not in this catalog. Evidence: oracle-all-dependencies.csv:14. Who can say: the DBA who owns the link.
+- U-33: scheduler job INTAKE.PUSH_TO_SFTP runs /opt/intake/push_export.sh, which the database cannot describe. Evidence: oracle-scheduler-jobs.csv:4. Who can say: whoever owns the schedule.
+- U-34: package INTBATCH.INTXTRA depends on INTAKE.INTAKE_ALIAS, a BTYPE A object the snapshot cannot resolve to a table. Evidence: db2-syspackdep.csv:8. Who can say: the DBA who owns the alias.

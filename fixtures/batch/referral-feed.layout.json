@@ -1,0 +1,23 @@
+[
+  {
+    "name": "CaseId",
+    "type": "text",
+    "length": 8
+  },
+  {
+    "name": "CaseType",
+    "type": "text",
+    "length": 10
+  },
+  {
+    "name": "HouseholdSize",
+    "type": "comp3",
+    "digits": 3
+  },
+  {
+    "name": "BenefitAmount",
+    "type": "comp3",
+    "digits": 7,
+    "scale": 2
+  }
+]
