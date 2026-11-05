@@ -1,7 +1,7 @@
 // scripts/parity/check-referee.mjs — every referee path, and every file under it, is owned only by
 // teams, never by the agent, so no change to it merges without a code owner's review.
 // It reads files, so it proves ownership is DECLARED. Whether the host enforces it is a setting
-// checked by a person (lesson 28's checklist). One adapter per code host (REPO_HOST):
+// checked by a person (lesson 38's checklist). One adapter per code host (REPO_HOST):
 //   github (default) and bitbucket: CODEOWNERS, last matching line wins;
 //   gitlab: CODEOWNERS with [Sections]; ^[optional] sections require no approval;
 //   azure-devops: no owners file; the exported required-reviewer policies are checked instead.
